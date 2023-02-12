@@ -71,7 +71,7 @@ contract Voting {
 
     function vote(string memory _foodName) public{          //voting function
         address _voterAddr = msg.sender;
-        require(stillGoing = false, "Vote is already closed or not opened yet!");
+        require(stillGoing = true, "Vote is already closed or not opened yet!");
         require(checkVotedFood(_foodName), "Your choosen food is not available for voting! :(");
         require(checkVote(_voterAddr), "You already voted! >:(");
         //Vote eligable 
