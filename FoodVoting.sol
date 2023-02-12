@@ -1,30 +1,34 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.0;
+pragma abicoder v2;
 
 contract Voting {
-    address public chef; 
+    address private chef; 
     // Mappings
-    mapping(address => RoomMate) public mappingToRoomMates;
-    mapping(uint => FoodOption) public foods;
+    mapping(address => RoomMate) internal mappingToRoomMates;
+    mapping(uint => FoodOption) internal foods;
     // Structs
     struct FoodOption { //Food
         string foodName;
         int8 voteCount;
     }
     struct RoomMate {   //Voter
-        string votersName;
         bool voted; 
     }
+    bool stillGoing; //Vote 
 
     string[] default_food = ["Pizza","Burger", "Salad"];
-    uint amountFoods;
-
-    address[] public rmAddr;
+    uint public amountFoods;
+    string[] foodList;
  
     constructor () { 
         chef = (msg.sender);                       //whoever deploys the smart contract, is the chef
-        addDefault();
+        stillGoing = false;
+    }
+    function startVote() public{
+        require(msg.sender == chef, "You can not start the vote!");
+        stillGoing = true;
     }
 
 
@@ -33,21 +37,23 @@ contract Voting {
 
         for (uint i = 0; i< default_food.length;i++){    //fill foods with default food options
            foods[i] = FoodOption(default_food[i],0);
+           foodList.push(default_food[i]);
            amountFoods++;
        }
     }
     function addFood(string memory _foodName) public{   //add more food options
         require(msg.sender == chef, "Only Chef can add food!");
-        uint j = amountFoods+1;
+        uint j = amountFoods;
         foods[j] = FoodOption(_foodName,0);
+        amountFoods++;
+        foodList.push(_foodName);
     }
-    //error?
-    // function foodListing() public returns (string[] memory foodList){
-    //     for (uint i=0; i< amountFoods;i++){
-    //         foodList[i] = foods[i].foodName;
-    //     }
-    // }
-    function checkVotedFood (string memory _foodName) internal returns(bool){
+    function foodListing() public view returns (string[] memory _foodList){ //shows list of available foods to vote for
+        _foodList = foodList;
+        return _foodList;
+    }
+
+    function checkVotedFood (string memory _foodName) internal returns(bool){   //does voted food exist as an option?
         for (uint i=0; i<amountFoods;i++){
             if(keccak256(abi.encodePacked(_foodName)) == keccak256(abi.encodePacked(foods[i].foodName))){
                 return true;
@@ -55,7 +61,7 @@ contract Voting {
         }
         return false;
     }
-    function checkVote (string memory _votersName, address _voterAddr) internal returns (bool) {
+    function checkVote (address _voterAddr) internal returns (bool) {   //already voted or not?
         if (mappingToRoomMates[_voterAddr].voted == false){
             mappingToRoomMates[_voterAddr].voted = true;
             return true;
@@ -63,10 +69,11 @@ contract Voting {
         return false;
     }
 
-    function vote(string memory _votersName,string memory _foodName) public{
+    function vote(string memory _foodName) public{          //voting function
         address _voterAddr = msg.sender;
+        require(stillGoing = false, "Vote is already closed or not opened yet!");
         require(checkVotedFood(_foodName), "Your choosen food is not available for voting! :(");
-        require(checkVote(_votersName, _voterAddr), "You already voted! >:(");
+        require(checkVote(_voterAddr), "You already voted! >:(");
         //Vote eligable 
         for (uint i=0; i<amountFoods;i++){  //increase votecount by 1
             if(keccak256(abi.encodePacked(_foodName)) == keccak256(abi.encodePacked(foods[i].foodName))){
@@ -74,10 +81,8 @@ contract Voting {
             }
         }
     }
-
-//TODO: find more elegant solution for tie
-
     function result () public returns (string memory winner){
+        string memory winnerText = "The winner is ";
         string memory currentWinner = foods[0].foodName;
         int8 currentWinnerVotes = foods[0].voteCount;
         for (uint i=0; i<amountFoods;i++){  
@@ -85,11 +90,13 @@ contract Voting {
                 currentWinner = foods[i].foodName;
                 currentWinnerVotes = foods[i].voteCount;
             }
-            if(foods[i].voteCount == currentWinnerVotes){   // 
-                return winner="There is a tie. Consult chef.";
-            }
         }
+        winner = string.concat(winnerText, currentWinner);
         return winner;
     }
-//TODO: End of voting
+
+    function endVote() public{
+        require(stillGoing = true);
+        stillGoing = false;
+    }
 } // end of contract
