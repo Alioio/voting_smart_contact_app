@@ -16,15 +16,18 @@ contract Voting {
     struct RoomMate {   //Voter
         bool voted; 
     }
-    bool stillGoing; //Vote 
+    bool public stillGoing; //Vote 
 
     string[] default_food = ["Pizza","Burger", "Salad"];
     uint public amountFoods;
     string[] foodList;
+    FoodOption[] internal tieList;
+    uint internal tieFoods;
+    string[] public tiedFoods;
  
     constructor () { 
         chef = (msg.sender);                       //whoever deploys the smart contract, is the chef
-        stillGoing = false;
+        //stillGoing = false;
     }
     function startVote() public{
         require(msg.sender == chef, "You can not start the vote!");
@@ -81,16 +84,51 @@ contract Voting {
             }
         }
     }
+    function tieHandler() internal{
+        int8 biggestTieVoteNumber = tieList[0].voteCount;
+        for (uint i = 1; i< tieFoods;i++){
+            if(biggestTieVoteNumber < tieList[i].voteCount){
+                biggestTieVoteNumber = tieList[i].voteCount;
+            }
+        }
+        for(uint i = 0; i<tieFoods;i++){
+            if(biggestTieVoteNumber == tieList[i].voteCount){
+                tiedFoods.push(tieList[i].foodName);
+            }
+        }
+    }
+    function tieListing() public view returns (string[] memory _tieList){ //shows list of available foods to vote for
+        _tieList = tiedFoods;
+        return _tieList;
+    }
+
+
+
+
     function result () public returns (string memory winner){
         string memory winnerText = "The winner is ";
         string memory currentWinner = foods[0].foodName;
         int8 currentWinnerVotes = foods[0].voteCount;
-        for (uint i=0; i<amountFoods;i++){  
+        for (uint i=1; i<amountFoods;i++){  
             if(foods[i].voteCount> currentWinnerVotes){
                 currentWinner = foods[i].foodName;
                 currentWinnerVotes = foods[i].voteCount;
             }
+            if(foods[i].voteCount==currentWinnerVotes){
+                tieList.push(foods[i]);
+                tieList.push(foods[i-1]);
+                tieFoods++;
+            }
         }
+        if (tieList.length!=0){
+            tieHandler();
+            winner = "There is a tie! Find out which foods have the same amount of votes with the function:tiedFoods()! The chef will decide which food will be cooked tonight :)";
+            return winner;
+        }
+
+
+
+
         winner = string.concat(winnerText, currentWinner);
         return winner;
     }
