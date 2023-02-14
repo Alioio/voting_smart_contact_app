@@ -48,7 +48,7 @@ contract Voting {
     }
     function addFood(string memory _foodName) public{   //add more food options
         require(msg.sender == chef, "Only Chef can add food!");
-        require(voteStarted == true, "You can only add food before the voting process starts.");
+        require(voteStarted == false, "You can only add food before the voting process starts.");
         uint j = amountFoods;
         foods[j] = FoodOption(_foodName,0);
         amountFoods++;
@@ -99,8 +99,9 @@ contract Voting {
             }
         }
     }
-    // function tieListing() public view returns (string[] memory _tieList){ //shows list of tied foods
-    //     _tieList = tiedFoods;
+    // function tieListing() public view returns (FoodOption[] memory _tieList){ //shows list of tied foods
+    //     require(msg.sender == chef, "Dinner will be a surprise!");
+    //     _tieList = tieList;
     //     return _tieList;
     // }
 function result () public returns (string memory winner){
@@ -130,7 +131,10 @@ function result () public returns (string memory winner){
     }
 
     function endVote() public{
+        require(msg.sender == chef, "You can NOT end the vote.");
+        require(voteStarted == true, "You can't end the vote before it started.");
         require(stillGoing == true);
+
         stillGoing = false;
         voteEnded = true;
     }
